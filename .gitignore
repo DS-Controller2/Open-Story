@@ -22,4 +22,5 @@ Thumbs.db
 .env
 *.env
 # Saves
+saves/
 saves/*.sav

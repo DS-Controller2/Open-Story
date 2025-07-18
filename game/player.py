@@ -17,6 +17,26 @@ class Player:
         self.base_health = 80
         self.health = self.calculate_max_health()
 
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "inventory": self.inventory,
+            "attributes": self.attributes,
+            "base_health": self.base_health,
+            "health": self.health,
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        player = cls()
+        player.name = data["name"]
+        player.inventory = data["inventory"]
+        player.attributes = data["attributes"]
+        player.base_health = data["base_health"]
+        player.health = data["health"]
+        return player
+
+
     def get_attribute_modifier(self, attr: str) -> int:
         """Calculates the D&D-style modifier for an attribute."""
         score = self.attributes.get(attr.upper())

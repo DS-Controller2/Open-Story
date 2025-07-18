@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Dict
+from utils.display import print_info, print_error
 
 # --- World Building Blocks ---
 
@@ -11,15 +12,36 @@ class WorldInfoEntry:
     # Triggers can be used to make this info appear in context, similar to Story Cards
     triggers: List[str] = field(default_factory=list)
 
+    def to_dict(self):
+        return {"name": self.name, "entry": self.entry, "triggers": self.triggers}
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
+
 @dataclass
 class Race:
     name: str
     description: str
-    
+
+    def to_dict(self):
+        return {"name": self.name, "description": self.description}
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
+
 @dataclass
 class Faction:
     name: str
     description: str
+
+    def to_dict(self):
+        return {"name": self.name, "description": self.description}
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
 
 @dataclass
 class Class:
@@ -28,12 +50,26 @@ class Class:
     # Base attributes for this class
     attributes: Dict[str, int] = field(default_factory=dict)
 
+    def to_dict(self):
+        return {"name": self.name, "description": self.description, "attributes": self.attributes}
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
+
 @dataclass
 class Location:
     key: str # Unique identifier, e.g., "tavern"
     name: str
     description: str
     exits: Dict[str, str] = field(default_factory=dict)
+
+    def to_dict(self):
+        return {"key": self.key, "name": self.name, "description": self.description, "exits": self.exits}
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
 
 # --- The World Itself ---
 
@@ -47,6 +83,31 @@ class World:
     classes: Dict[str, Class] = field(default_factory=dict)
     locations: Dict[str, Location] = field(default_factory=dict)
     world_info: List[WorldInfoEntry] = field(default_factory=list)
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "genre": self.genre,
+            "description": self.description,
+            "races": {k: v.to_dict() for k, v in self.races.items()},
+            "factions": {k: v.to_dict() for k, v in self.factions.items()},
+            "classes": {k: v.to_dict() for k, v in self.classes.items()},
+            "locations": {k: v.to_dict() for k, v in self.locations.items()},
+            "world_info": [wi.to_dict() for wi in self.world_info],
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            name=data["name"],
+            genre=data["genre"],
+            description=data["description"],
+            races={k: Race.from_dict(v) for k, v in data["races"].items()},
+            factions={k: Faction.from_dict(v) for k, v in data["factions"].items()},
+            classes={k: Class.from_dict(v) for k, v in data["classes"].items()},
+            locations={k: Location.from_dict(v) for k, v in data["locations"].items()},
+            world_info=[WorldInfoEntry.from_dict(wi) for wi in data["world_info"]],
+        )
 
     def get_location(self, key: str) -> Location | None:
         return self.locations.get(key)
@@ -107,37 +168,37 @@ def get_default_world() -> World:
     
     return default_world
 
-def create_custom_world() -> World:
+def create_custom_world(print_info, print_error) -> World:
     """
     Guides the user through creating a custom world.
     """
-    print("\n--- World Creation ---")
+    print_info("\n--- World Creation ---")
     name = input("Enter the name of your world: ")
     genre = input("Enter the genre of your world (e.g., Sci-Fi, Fantasy, Cyberpunk): ")
     description = input("Enter a brief description of your world: ")
 
     world = World(name=name, genre=genre, description=description)
 
-    print("\n--- Starting Location ---")
-    print("Let's create the first location where your story will begin.")
+    print_info("\n--- Starting Location ---")
+    print_info("Let's create the first location where your story will begin.")
     loc_key = input("Enter a unique key for the location (e.g., 'home_base'): ")
     loc_name = input(f"Enter the name of the location (e.g., 'The Rusty Cog Cantina'): ")
     loc_desc = input(f"Enter a description for {loc_name}: ")
     world.locations[loc_key] = Location(key=loc_key, name=loc_name, description=loc_desc)
 
-    print("\n--- Character Classes ---")
-    print("Define at least one character class.")
+    print_info("\n--- Character Classes ---")
+    print_info("Define at least one character class.")
     while True:
         class_name = input("Enter a class name (or 'done' to finish): ")
         if class_name.lower() == 'done':
             if world.classes:
                 break
             else:
-                print("You must define at least one class.")
+                print_error("You must define at least one class.")
                 continue
         class_desc = input(f"Enter a description for the {class_name}: ")
         attributes = {}
-        print("Set the attribute modifiers for this class (e.g., STR 2, DEX -1).")
+        print_info("Set the attribute modifiers for this class (e.g., STR 2, DEX -1).")
         while True:
             attr_str = input("Enter attribute modifier (or 'done'): ").upper()
             if attr_str.lower() == 'done':
@@ -146,7 +207,7 @@ def create_custom_world() -> World:
                 stat, value = attr_str.split()
                 attributes[stat] = int(value)
             except ValueError:
-                print("Invalid format. Please use 'STAT #', e.g., 'STR 2'.")
+                print_error("Invalid format. Please use 'STAT #', e.g., 'STR 2'.")
         world.classes[class_name.lower()] = Class(name=class_name, description=class_desc, attributes=attributes)
 
     return world

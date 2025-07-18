@@ -1,3 +1,4 @@
+import shlex
 from utils.display import print_info, print_error, print_story, print_location, prompt_input, print_responsibility_warning
 from game.safety import VALID_LEVELS
 import utils.file_handler as file_handler
@@ -7,9 +8,9 @@ def handle_command(user_action, game_state, story_manager, last_player_action):
     Processes user commands, modifying the game state and handling game logic.
     Returns a tuple: (should_continue, last_player_action)
     """
-    action_lower = user_action.lower()
+    action_lower = user_action.lower().lstrip('/')
     
-    if action_lower.startswith('/save'):
+    if action_lower.startswith('save'):
         parts = action_lower.split(' ', 1)
         if len(parts) > 1 and parts[1]:
             save_name = parts[1]
@@ -18,7 +19,7 @@ def handle_command(user_action, game_state, story_manager, last_player_action):
             print_error("Usage: /save <filename>")
         return True, last_player_action
 
-    elif action_lower.startswith('/safe '):
+    elif action_lower.startswith('safe '):
         parts = action_lower.split(' ', 1)
         if len(parts) > 1 and parts[1] in VALID_LEVELS:
             new_level = parts[1]
@@ -35,7 +36,7 @@ def handle_command(user_action, game_state, story_manager, last_player_action):
             print_error(f"Invalid safety level. Use one of: {', '.join(VALID_LEVELS)}")
         return True, last_player_action
 
-    elif action_lower == '/revert':
+    elif action_lower == 'revert':
         if game_state.revert_last_turn():
             print_info("Last turn reverted.")
             print_story("\n" + game_state.get_current_story())
@@ -43,7 +44,7 @@ def handle_command(user_action, game_state, story_manager, last_player_action):
             print_error("Nothing to revert.")
         return True, last_player_action
 
-    elif action_lower == '/retry':
+    elif action_lower == 'retry':
         if last_player_action and game_state.revert_last_turn():
             print_info("Re-running last action...")
             story_text, commands = story_manager.process_action(last_player_action)
@@ -53,7 +54,7 @@ def handle_command(user_action, game_state, story_manager, last_player_action):
             print_error("No previous action to retry.")
         return True, last_player_action
 
-    elif action_lower == '/undo':
+    elif action_lower == 'undo':
         if game_state.undo():
             print_info("Undo successful.")
             print_story("\n" + game_state.get_current_story())
@@ -61,7 +62,7 @@ def handle_command(user_action, game_state, story_manager, last_player_action):
             print_error("Cannot undo further.")
         return True, last_player_action
 
-    elif action_lower == '/redo':
+    elif action_lower == 'redo':
         if game_state.redo():
             print_info("Redo successful.")
             print_story("\n" + game_state.get_current_story())
@@ -69,7 +70,7 @@ def handle_command(user_action, game_state, story_manager, last_player_action):
             print_error("Cannot redo further.")
         return True, last_player_action
 
-    elif action_lower == '/world' or action_lower.startswith('/world '):
+    elif action_lower == 'world' or action_lower.startswith('world '):
         parts = action_lower.split(' ', 1)
         if len(parts) > 1 and parts[1] == 'info':
             world = game_state.world
@@ -97,7 +98,7 @@ def handle_command(user_action, game_state, story_manager, last_player_action):
             print_error("Usage: /world info")
         return True, last_player_action
 
-    elif action_lower.startswith('/memory '):
+    elif action_lower.startswith('memory '):
         parts = action_lower.split(' ', 2)
         if len(parts) > 1:
             sub_cmd = parts[1]
@@ -109,7 +110,7 @@ def handle_command(user_action, game_state, story_manager, last_player_action):
                 print_info("\n--- Memory Bank ---")
                 if game_state.memory_manager.memory_bank:
                     for i, fact in enumerate(game_state.memory_manager.memory_bank):
-                        print(f"{i+1}: {fact}")
+                        print(f"{i+1}: {fact.fact}")
                 else:
                     print("The memory bank is empty.")
                 print_info("-------------------")
@@ -119,37 +120,53 @@ def handle_command(user_action, game_state, story_manager, last_player_action):
             print_error("Usage: /memory [add <fact>|show]")
         return True, last_player_action
 
-    elif action_lower.startswith('/card '):
-        parts = user_action.split(' ', 2) # Use user_action to preserve case for name
-        if len(parts) > 1:
-            sub_cmd = parts[1].lower()
-            if sub_cmd == 'create' and len(parts) > 2:
-                try:
-                    name, entry, triggers_str = parts[2].split('|')
-                    triggers = [t.strip() for t in triggers_str.split(',')]
-                    card = game_state.memory_manager.create_story_card(name.strip(), entry.strip(), triggers)
-                    print_info(f"Created Story Card: '{card.name}'")
-                except ValueError:
-                    print_error("Usage: /card create <Name> | <Entry> | <trigger1, trigger2, ...>")
-            elif sub_cmd == 'list':
-                print_info("\n--- Story Cards ---")
-                if game_state.memory_manager.story_cards:
-                    for card in game_state.memory_manager.story_cards.values():
-                        print(f"- {card.name}: triggers on [{', '.join(card.triggers)}]")
+    elif action_lower.startswith('card '):
+        try:
+            parts = shlex.split(user_action)
+            if len(parts) > 1:
+                sub_cmd = parts[1].lower()
+                if sub_cmd == 'create':
+                    try:
+                        # Find the --triggers flag
+                        trigger_index = parts.index('--triggers')
+                        # Name is the second argument
+                        name = parts[2]
+                        # Entry is everything between the name and --triggers
+                        entry = " ".join(parts[3:trigger_index])
+                        # Triggers are everything after --triggers
+                        triggers_list = parts[trigger_index+1:]
+                        
+                        if not name or not entry or not triggers_list:
+                            raise ValueError
+
+                        triggers_dict = {t: 1.0 for t in triggers_list}
+                        card = game_state.memory_manager.create_story_card(name, entry, triggers_dict)
+                        print_info(f"Created Story Card: '{card.name}'")
+
+                    except (ValueError, IndexError):
+                        print_error('Usage: /card create <name> "<entry>" --triggers <trigger1> "<trigger 2>" ...')
+
+                elif sub_cmd == 'list':
+                    print_info("\n--- Story Cards ---")
+                    if game_state.memory_manager.story_cards:
+                        for card in game_state.memory_manager.story_cards.values():
+                            print(f"- {card.name}: triggers on [{', '.join(card.triggers.keys())}]")
+                    else:
+                        print("No story cards have been created.")
+                    print_info("-------------------")
                 else:
-                    print("No story cards have been created.")
-                print_info("-------------------")
+                    print_error("Usage: /card [create <details>|list]")
             else:
                 print_error("Usage: /card [create <details>|list]")
-        else:
-            print_error("Usage: /card [create <details>|list]")
+        except Exception as e:
+            print_error(f"An error occurred parsing the card command: {e}")
         return True, last_player_action
 
-    elif action_lower in ['/quit', 'quit']:
+    elif action_lower in ['quit', 'quit']:
         print_info("Thank you for playing StoryForge!")
         return "quit", last_player_action
 
-    elif action_lower == '/stats':
+    elif action_lower == 'stats':
         print_info("\n--- API Usage Statistics ---")
         print_info(f"Total API Calls: {game_state.api_calls}")
         print_info(f"Total Input Tokens: {game_state.total_input_tokens}")
