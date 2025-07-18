@@ -97,7 +97,7 @@ class StoryManager:
         # For now, we assume all world info is relevant. This could be improved with triggers.
         active_world_info = world.world_info
         
-        all_reminders = [f"Player Note: {c.entry}" for c in active_story_cards]
+        all_reminders = [f"Player Note: {c[0].entry}" for c in active_story_cards]
         all_reminders += [f"World Lore: {wi.entry}" for wi in active_world_info]
 
         # Allocate budgets
@@ -117,7 +117,7 @@ class StoryManager:
 
         # Fill Memory Bank
         if memory_bank:
-            memory_str = "\n".join(memory_bank)
+            memory_str = "\n".join([fact.fact for fact in memory_bank])
             if self.model.count_tokens(memory_str).total_tokens > memory_budget:
                 print("WARN: Memory bank exceeds budget. Truncating.")
             final_context.append(f"--- MEMORY BANK ---\n{memory_str}")
@@ -147,7 +147,7 @@ class StoryManager:
         
         settings = get_safety_settings(self.game_state.safety_level)
         tier_limits = get_rate_limits(self.game_state.api_tier)
-        generation_config = {"max_output_tokens": tier_limits.get("TPM")}
+        generation_config = {"max_output_tokens": 200}
 
         try:
             response = self.model.generate_content(
@@ -160,6 +160,11 @@ class StoryManager:
             if hasattr(response, 'usage_metadata'):
                 usage = response.usage_metadata
                 print(f"Usage metadata: {usage}")
+                cached_tokens = getattr(usage, 'cached_content_token_count', 0)
+                if cached_tokens > 0:
+                    print(f"Context Caching: Active (Saved {cached_tokens} tokens)")
+                else:
+                    print("Context Caching: Inactive")
                 self.game_state.total_input_tokens += usage.prompt_token_count
                 self.game_state.total_output_tokens += usage.candidates_token_count
             

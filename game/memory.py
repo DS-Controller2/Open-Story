@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Optional, Any, Tuple
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -21,12 +21,26 @@ class StoryCard:
     relevance: float = 1.0
     last_activated: float = field(default_factory=time.time)
 
+    def to_dict(self):
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
+
 @dataclass
 class StoryCardTemplate:
     """A template for creating StoryCards dynamically."""
     name_template: str
     entry_template: str
     triggers_template: Dict[str, float]
+
+    def to_dict(self):
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
 
 @dataclass
 class MemoryFact:
@@ -35,6 +49,13 @@ class MemoryFact:
     relevance: float = 1.0
     last_accessed: float = field(default_factory=time.time)
     tags: List[str] = field(default_factory=list)
+
+    def to_dict(self):
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
 
 @dataclass
 class FusedMemory:
@@ -86,6 +107,40 @@ class MemoryManager:
         self.nlp = spacy.load('en_core_web_sm')
         self.fuzzy_threshold = fuzzy_threshold
         self.fusion = ContextualFusion()
+
+    def to_dict(self):
+        return {
+            "memory_bank": [fact.to_dict() for fact in self.memory_bank],
+            "story_cards": {name: card.to_dict() for name, card in self.story_cards.items()},
+            "active_card_names": self.active_card_names,
+            "story_card_templates": {name: template.to_dict() for name, template in self.story_card_templates.items()},
+            "decay_rate": self.decay_rate,
+            "fuzzy_threshold": self.fuzzy_threshold,
+            "graph": nx.node_link_data(self.graph, edges="edges")
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        manager = cls(decay_rate=data["decay_rate"], fuzzy_threshold=data["fuzzy_threshold"])
+        manager.memory_bank = [MemoryFact.from_dict(f) for f in data["memory_bank"]]
+        manager.story_cards = {name: StoryCard.from_dict(c) for name, c in data["story_cards"].items()}
+        manager.active_card_names = data["active_card_names"]
+        manager.story_card_templates = {name: StoryCardTemplate.from_dict(t) for name, t in data["story_card_templates"].items()}
+        
+        graph_data = data.get("graph")
+        if graph_data:
+            if "edges" in graph_data:
+                manager.graph = nx.node_link_graph(graph_data, edges="edges")
+            elif "links" in graph_data:
+                manager.graph = nx.node_link_graph(graph_data, edges="links")
+            else:
+                manager.graph = nx.node_link_graph(graph_data)
+        else:
+            manager.graph = nx.Graph()
+
+        manager._rebuild_index()
+        return manager
+
 
     def _initialize_index(self, dimensions: int):
         """Initializes the FAISS index."""

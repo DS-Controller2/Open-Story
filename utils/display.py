@@ -134,12 +134,12 @@ def draw_box(text: str, color=Fore.WHITE) -> str:
 def print_story(text: str):
     """Prints the main story text in a standard color, with markdown support."""
     # Delegate color and style handling to the markdown parser
-    ansi_formatted_text = _markdown_to_ansi(text, base_color=Fore.CYAN + Style.BRIGHT)
+    ansi_formatted_text = _markdown_to_ansi(text, base_color=Fore.LIGHTWHITE_EX + Style.BRIGHT)
     print("\n" + ansi_formatted_text + Style.RESET_ALL)
 
 def print_info(text: str):
     """Prints informational text (e.g., save confirmations, help) in a bright color."""
-    print(Fore.YELLOW + text + Style.RESET_ALL)
+    print(Fore.LIGHTWHITE_EX + text + Style.RESET_ALL)
 
 def print_error(text: str):
     """Prints error messages."""

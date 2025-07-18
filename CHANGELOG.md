@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+### Changed
+- **JSON Serialization**: The entire game state saving and loading mechanism has been migrated from `pickle` to `json`. This improves security and makes save files human-readable.
+- **Command Handling**:
+    - The `/card create` command has been reworked with a more robust and user-friendly syntax (`--triggers` flag).
+    - Command parsing now accepts both `/` and `//` as prefixes.
+- **UI & Display**:
+    - Improved color contrast for better readability.
+    - Added a debug message to indicate when context caching is active.
+- **Bug Fixes**:
+    - Fixed a crash when loading save files from previous versions.
+    - Fixed a bug that prevented story cards from being correctly processed in the story context.
+    - Fixed a `TypeError` when building the story context with an empty memory bank.
+- **Dependencies**: Updated `en-core-web-sm` to version 3.8.0.
+
 ### Added
 - **MemoryManager Overhaul**: The `MemoryManager` has been completely overhauled with a wide range of new features and improvements.
     - **Semantic Search**: Implemented a vector-based semantic search for the Memory Bank using `sentence-transformers` and `faiss-cpu`.

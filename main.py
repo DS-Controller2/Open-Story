@@ -30,15 +30,17 @@ class GameCompleter(Completer):
         words = text.split(' ')
 
         # --- Completion for main commands ---
-        if len(words) == 1 and text.startswith('/'):
+        if len(words) == 1 and (text.startswith('/') or text.startswith('//')):
+            prefix = '//' if text.startswith('//') else '/'
+            command_text = text.lstrip('/')
             for cmd_name in sorted(COMMANDS.keys()):
-                if cmd_name.startswith(words[0][1:]):
-                    yield Completion(f"/{cmd_name}", start_position=-len(words[0])+1, display_meta=COMMANDS[cmd_name]['help'])
+                if cmd_name.startswith(command_text):
+                    yield Completion(f"{prefix}{cmd_name}", start_position=-len(text), display_meta=COMMANDS[cmd_name]['help'])
             return
 
         # --- Completion for command arguments (sub-commands) ---
-        if len(words) == 2 and words[0].startswith('/'):
-            cmd = words[0][1:]
+        if len(words) == 2 and (words[0].startswith('/') or words[0].startswith('//')):
+            cmd = words[0].lstrip('/')
             if cmd in COMMANDS:
                 arg_list = COMMANDS[cmd].get('args', [])
                 for arg in arg_list:
@@ -132,7 +134,7 @@ def main():
                 print_error("Invalid choice. Please type 'custom' or 'default'.")
 
         if world_choice == 'custom':
-            game_state.world = create_custom_world()
+            game_state.world = create_custom_world(print_info, print_error)
 
         print_info(f"\n--- Welcome to {game_state.world.name} ---")
         print_story(game_state.world.description)
@@ -210,7 +212,7 @@ def main():
 
     print_story("\n" + current_story_text)
 
-    style = PromptToolkitStyle.from_dict({'prompt': 'ansiyellow'})
+    style = PromptToolkitStyle.from_dict({'prompt': 'ansiwhite'})
     session = PromptSession(completer=GameCompleter(), style=style)
     last_player_action = None
 
@@ -234,7 +236,7 @@ def main():
         
         action_lower = user_action.lower()
 
-        if action_lower.startswith('/'):
+        if action_lower.startswith('/') or action_lower.startswith('//'):
             command_result, last_player_action = handle_command(user_action, game_state, story_manager, last_player_action)
             if command_result == "quit":
                 break
