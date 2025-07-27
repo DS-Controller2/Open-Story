@@ -2,7 +2,8 @@ class Player:
     def __init__(self):
         self.name = "Hero"
         self.inventory = []
-        
+        self.max_inventory_weight = 20  # Add max_inventory_weight attribute
+
         # --- MODIFIED: The six core attributes ---
         self.attributes = {
             "STR": 10, # Strength: Physical power, melee damage, breaking things.
@@ -24,6 +25,7 @@ class Player:
             "attributes": self.attributes,
             "base_health": self.base_health,
             "health": self.health,
+            "max_inventory_weight": self.max_inventory_weight,
         }
 
     @classmethod
@@ -34,7 +36,12 @@ class Player:
         player.attributes = data["attributes"]
         player.base_health = data["base_health"]
         player.health = data["health"]
+        player.max_inventory_weight = data.get("max_inventory_weight", 20)
         return player
+
+    def get_inventory_weight(self):
+        """Calculates the total weight of all items in the inventory."""
+        return sum(item.get("weight", 0) for item in self.inventory)
 
 
     def get_attribute_modifier(self, attr: str) -> int:
@@ -59,9 +66,9 @@ class Player:
         
         inventory_lines = []
         if self.inventory:
-            inventory_lines.append("| Inventory:             |")
+            inventory_lines.append(f"| Inventory ({self.get_inventory_weight()}/{self.max_inventory_weight} kg):      |")
             for item in self.inventory:
-                inventory_lines.append(f"|   - {item:<18}|")
+                inventory_lines.append(f"|   - {item['name']:<18}|")
         else:
             inventory_lines.append("| Inventory: Empty      |")
 

@@ -1,4 +1,5 @@
 import os
+print("Starting main.py")
 from dotenv import load_dotenv
 from colorama import init as colorama_init
 
@@ -85,9 +86,21 @@ def apply_commands(game_state, commands):
     if 'ITEM' in commands:
         item_cmd = commands['ITEM']
         if item_cmd.startswith('+') and len(item_cmd) > 1:
-             game_state.player.inventory.append(item_cmd[1:])
-        elif item_cmd.startswith('-') and len(item_cmd) > 1 and item_cmd[1:] in game_state.player.inventory:
-            game_state.player.inventory.remove(item_cmd[1:])
+            try:
+                item_name, item_weight_str = item_cmd[1:].split(',')
+                item_weight = int(item_weight_str)
+                if game_state.player.get_inventory_weight() + item_weight > game_state.player.max_inventory_weight:
+                    print_error("You can't carry any more weight.")
+                else:
+                    game_state.player.inventory.append({"name": item_name, "weight": item_weight})
+            except ValueError:
+                print_error(f"Invalid item format received from AI: {item_cmd}")
+        elif item_cmd.startswith('-') and len(item_cmd) > 1:
+            item_name_to_remove = item_cmd[1:]
+            for item in game_state.player.inventory:
+                if item["name"] == item_name_to_remove:
+                    game_state.player.inventory.remove(item)
+                    break
     if 'LOCATION' in commands:
         location_key = commands['LOCATION']
         if game_state.world.get_location(location_key):
