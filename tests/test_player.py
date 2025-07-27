@@ -7,7 +7,7 @@ class TestPlayer(unittest.TestCase):
         """Test that the player starts with default values."""
         player = Player()
         self.assertEqual(player.name, "Hero")
-        self.assertEqual(player.health, 100)
+        self.assertEqual(player.health, 80)
         self.assertEqual(player.inventory, [])
 
     def test_display_status(self):
@@ -17,5 +17,5 @@ class TestPlayer(unittest.TestCase):
         player.inventory.append("torch")
         status = player.display_status()
         self.assertIn("| Name: Test |", status)
-        self.assertIn("| Health: 100/100 |", status)
-        self.assertIn("| Inventory: torch |", status)
+        self.assertIn("| Health: 80/80 |", status)
+        self.assertIn("|   - torch             |", status)

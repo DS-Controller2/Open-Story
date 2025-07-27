@@ -1,4 +1,5 @@
 import os
+import sys
 print("Starting main.py")
 from dotenv import load_dotenv
 from colorama import init as colorama_init
@@ -115,36 +116,53 @@ def main():
     print_info("Tip: For the best experience, run in a fullscreen terminal.")
     
     # Ask for API tier at the beginning
-    api_tier_choice = ""
-    while api_tier_choice not in VALID_TIERS:
-        api_tier_choice = prompt_input(f"Choose your API tier ({'/'.join(VALID_TIERS)}): ").lower()
-        if api_tier_choice not in VALID_TIERS:
-            print_error("Invalid API tier. Please choose from the available options.")
+    # --- MODIFIED: Default to 'free' in non-interactive environments ---
+    if not sys.stdout.isatty():
+        api_tier_choice = "free"
+        print_info(f"Non-interactive mode detected. Using API tier: {api_tier_choice}")
+    else:
+        api_tier_choice = ""
+        while api_tier_choice not in VALID_TIERS:
+            api_tier_choice = prompt_input(f"Choose your API tier ({'/'.join(VALID_TIERS)}): ").lower()
+            if api_tier_choice not in VALID_TIERS:
+                print_error("Invalid API tier. Please choose from the available options.")
     
     print_info(f"API tier set to: {api_tier_choice.upper()}")
     
-    choice = prompt_input("Type 'new' to start a new adventure or 'load' to continue: ").lower()
+    if not sys.stdout.isatty():
+        choice = "new"
+        print_info(f"Non-interactive mode detected. Starting a new game.")
+    else:
+        choice = prompt_input("Type 'new' to start a new adventure or 'load' to continue: ").lower()
 
     if choice == 'load':
-        saves = file_handler.list_save_files()
-        if not saves:
-            print_error("No save files found.")
+        if not sys.stdout.isatty():
+            print_error("Cannot load in non-interactive mode.")
             game_state = None
         else:
-            print_info("Available saves: " + ", ".join(saves))
-            save_name = prompt_input("Enter the name of the save file to load: ")
-            game_state = file_handler.load_game(save_name)
+            saves = file_handler.list_save_files()
+            if not saves:
+                print_error("No save files found.")
+                game_state = None
+            else:
+                print_info("Available saves: " + ", ".join(saves))
+                save_name = prompt_input("Enter the name of the save file to load: ")
+                game_state = file_handler.load_game(save_name)
     
     if game_state is None:
         if choice == 'load': 
             print_info("Starting a new game instead.")
         game_state = GameState(api_tier=api_tier_choice)
         
-        world_choice = ""
-        while world_choice not in ['custom', 'default']:
-            world_choice = prompt_input("Create a 'custom' world or use the 'default' world?: ").lower()
-            if world_choice not in ['custom', 'default']:
-                print_error("Invalid choice. Please type 'custom' or 'default'.")
+        if not sys.stdout.isatty():
+            world_choice = "default"
+            print_info(f"Non-interactive mode detected. Using default world.")
+        else:
+            world_choice = ""
+            while world_choice not in ['custom', 'default']:
+                world_choice = prompt_input("Create a 'custom' world or use the 'default' world?: ").lower()
+                if world_choice not in ['custom', 'default']:
+                    print_error("Invalid choice. Please type 'custom' or 'default'.")
 
         if world_choice == 'custom':
             game_state.world = create_custom_world(print_info, print_error)
@@ -152,64 +170,79 @@ def main():
         print_info(f"\n--- Welcome to {game_state.world.name} ---")
         print_story(game_state.world.description)
         
-        player_name = prompt_input("\nEnter your hero's name: ")
+        if not sys.stdout.isatty():
+            player_name = "Jules"
+            print_info(f"Non-interactive mode detected. Using player name: {player_name}")
+        else:
+            player_name = prompt_input("\nEnter your hero's name: ")
         if player_name: game_state.player.name = player_name
 
-        char_choice = ""
-        while char_choice not in ['custom', 'preset']:
-            char_choice = prompt_input("Choose character creation: 'custom' or 'preset': ").lower()
-            if char_choice not in ['custom', 'preset']:
-                print_error("Invalid choice. Please type 'custom' or 'preset'.")
+        if not sys.stdout.isatty():
+            char_choice = "preset"
+            print_info(f"Non-interactive mode detected. Using preset character creation.")
+        else:
+            char_choice = ""
+            while char_choice not in ['custom', 'preset']:
+                char_choice = prompt_input("Choose character creation: 'custom' or 'preset': ").lower()
+                if char_choice not in ['custom', 'preset']:
+                    print_error("Invalid choice. Please type 'custom' or 'preset'.")
 
         if char_choice == 'preset':
-            available_classes = game_state.world.classes
-            class_name = ""
-            while class_name not in available_classes:
-                class_name = prompt_input(f"Enter class name ({', '.join(available_classes.keys())}): ").lower()
-                if class_name not in available_classes:
-                    print_error("Invalid class name.")
+            if not sys.stdout.isatty():
+                class_name = "warrior"
+                print_info(f"Non-interactive mode detected. Using class: {class_name}")
+            else:
+                available_classes = game_state.world.classes
+                class_name = ""
+                while class_name not in available_classes:
+                    class_name = prompt_input(f"Enter class name ({', '.join(available_classes.keys())}): ").lower()
+                    if class_name not in available_classes:
+                        print_error("Invalid class name.")
             
-            chosen_class = available_classes[class_name]
+            chosen_class = game_state.world.classes[class_name]
             for stat, points in chosen_class.attributes.items():
                 game_state.player.attributes[stat] += points
             print_info(f"\n{chosen_class.name} preset applied!")
         
         elif char_choice == 'custom':
-            print_info("\nCreate your character. You have 15 points to add to your base stats.")
-            print_info("All stats start at 10. Assign points using the format 'STAT #', e.g., 'str 3'.")
+            if not sys.stdout.isatty():
+                print_error("Cannot use custom character creation in non-interactive mode.")
+            else:
+                print_info("\nCreate your character. You have 15 points to add to your base stats.")
+                print_info("All stats start at 10. Assign points using the format 'STAT #', e.g., 'str 3'.")
 
-            points_to_spend = 15
-            valid_stats = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
+                points_to_spend = 15
+                valid_stats = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
 
-            while points_to_spend > 0:
-                print_info(f"\nPoints remaining: {points_to_spend}")
-                current_stats_str = " | ".join([f"{stat}: {game_state.player.attributes[stat]}" for stat in valid_stats])
-                print(current_stats_str)
-                
-                command = prompt_input("> ").upper()
-                
-                try:
-                    parts = command.split()
-                    if len(parts) != 2:
-                        print_error("Invalid format. Please use 'STAT #', e.g., 'DEX 3'")
-                        continue
-                    stat_to_add = parts[0]
-                    points_to_add = int(parts[1])
-                    if stat_to_add not in valid_stats:
-                        print_error(f"Invalid stat. Use one of: {', '.join(valid_stats)}")
-                        continue
-                    if points_to_add <= 0:
-                        print_error("You must assign a positive number of points.")
-                        continue
-                    if points_to_add > points_to_spend:
-                        print_error(f"You only have {points_to_spend} points remaining.")
-                        continue
-                    game_state.player.attributes[stat_to_add] += points_to_add
-                    points_to_spend -= points_to_add
-                except ValueError:
-                    print_error("Invalid number. The second part must be a whole number.")
-                except Exception as e:
-                    print_error(f"An unexpected error occurred: {e}")
+                while points_to_spend > 0:
+                    print_info(f"\nPoints remaining: {points_to_spend}")
+                    current_stats_str = " | ".join([f"{stat}: {game_state.player.attributes[stat]}" for stat in valid_stats])
+                    print(current_stats_str)
+
+                    command = prompt_input("> ").upper()
+
+                    try:
+                        parts = command.split()
+                        if len(parts) != 2:
+                            print_error("Invalid format. Please use 'STAT #', e.g., 'DEX 3'")
+                            continue
+                        stat_to_add = parts[0]
+                        points_to_add = int(parts[1])
+                        if stat_to_add not in valid_stats:
+                            print_error(f"Invalid stat. Use one of: {', '.join(valid_stats)}")
+                            continue
+                        if points_to_add <= 0:
+                            print_error("You must assign a positive number of points.")
+                            continue
+                        if points_to_add > points_to_spend:
+                            print_error(f"You only have {points_to_spend} points remaining.")
+                            continue
+                        game_state.player.attributes[stat_to_add] += points_to_add
+                        points_to_spend -= points_to_add
+                    except ValueError:
+                        print_error("Invalid number. The second part must be a whole number.")
+                    except Exception as e:
+                        print_error(f"An unexpected error occurred: {e}")
 
         print_info("\nCharacter creation complete!")
         game_state.player.health = game_state.player.calculate_max_health()
@@ -238,7 +271,11 @@ def main():
             break
 
         try:
-            user_action = session.prompt()
+            if not sys.stdout.isatty():
+                user_action = "look around"
+                print_info(f"Non-interactive mode detected. Using action: {user_action}")
+            else:
+                user_action = session.prompt()
         except KeyboardInterrupt:
             continue
         except EOFError:

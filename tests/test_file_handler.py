@@ -16,11 +16,13 @@ class TestFileHandler(unittest.TestCase):
 
     def tearDown(self):
         """Clean up dummy files and directories after tests."""
-        test_filepath = os.path.join(self.test_save_dir, f"{self.test_filename}.sav")
+        test_filepath = os.path.join(self.test_save_dir, f"{self.test_filename}.json")
         if os.path.exists(test_filepath):
             os.remove(test_filepath)
         if os.path.exists(self.test_save_dir):
-            os.rmdir(self.test_save_dir)
+            # Check if the directory is empty before trying to remove it
+            if not os.listdir(self.test_save_dir):
+                os.rmdir(self.test_save_dir)
 
     def test_save_and_load_game(self):
         """Test that a game state can be saved and reloaded accurately."""
