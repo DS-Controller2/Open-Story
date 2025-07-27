@@ -124,14 +124,18 @@ class StoryManager:
 
         # Fill History (most recent first)
         if recent_history:
-            history_str = ""
-            for entry in reversed(recent_history):
-                if self.model.count_tokens(history_str + entry).total_tokens < history_budget:
-                    history_str = entry + "\n" + history_str
-                else:
-                    break
+            history_str = "\n".join(recent_history[-3:])
+            if self.model.count_tokens(history_str).total_tokens > history_budget:
+                print("WARN: Recent history exceeds budget. Truncating.")
+                # This is a simple truncation, a more sophisticated approach might be needed
+                history_str = history_str[:history_budget]
+
             if history_str:
-                final_context.append(f"--- STORY SO FAR ---\n{history_str}")
+                final_context.append(f"--- RECENT STORY ---\n{history_str}")
+
+        # Add player's immediate goal if it exists
+        if self.game_state.player.goal:
+            final_context.append(f"--- PLAYER'S GOAL ---\n{self.game_state.player.goal}")
 
         # 3. The latest action
         final_context.append(f"--- PLAYER'S ACTION ---\n> {player_action}")

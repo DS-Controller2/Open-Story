@@ -7,7 +7,7 @@ class TestGameState(unittest.TestCase):
         """Test that the game state starts correctly."""
         gs = GameState()
         self.assertEqual(gs.current_location_key, "tavern")
-        self.assertEqual(gs.get_current_location_description(), "a dimly lit tavern, smelling of stale ale and sawdust. A single door leads out to the village square, and a grimy curtain covers an exit to the back.")
+        self.assertEqual(gs.get_current_location_description(), "A dimly lit tavern, smelling of stale ale and sawdust. A few patrons are scattered around, and a fire crackles in the hearth.")
         self.assertEqual(gs.story_history, [])
 
     def test_story_history(self):
